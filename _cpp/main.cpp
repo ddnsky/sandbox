@@ -10,7 +10,7 @@
 #include <deque>
 #include <unordered_map>
 
-long walk2(int E, const std::vector<int> &A, int index = 0)
+long walkGT(int E, const std::vector<int> &A, int index = 0)
 {
     long cur = 0;
     while (index < A.size() && E > 2)
@@ -18,7 +18,7 @@ long walk2(int E, const std::vector<int> &A, int index = 0)
         long dE = A[index] * (index + 1);
         if (dE + 2 <= E)
         {
-            auto w1 = A[index] + (E - dE - 2 > 2 ? walk2(E - dE - 2, A, index + 1) : 0);
+            auto w1 = A[index] + (E - dE - 2 > 2 ? walkGT(E - dE - 2, A, index + 1) : 0);
             cur = std::max(cur, w1);
         }
         index++;
@@ -29,7 +29,7 @@ long walk2(int E, const std::vector<int> &A, int index = 0)
 
 
 int gProcessed = 0;
-long walk(int E, const std::vector<int> &A)
+long walk1(int E, const std::vector<int> &A)
 {
     struct State
     {
@@ -64,7 +64,7 @@ long walk(int E, const std::vector<int> &A)
                 auto oldF = ii->second;
                 if (oldE<2+index)
                     continue;
-                if ((Fmax - oldF) * index + 2 < oldE)
+                if ((Fmax - oldF) * index + 2 <= oldE)
                 {
                     if (oldE >= dEmax)
                     {
@@ -112,6 +112,72 @@ long walk(int E, const std::vector<int> &A)
 
     return cur.Fmax;
 }
+
+
+long walk2(int E, const std::vector<int>& A)
+{
+    struct State
+    {
+        long Fmax = 0;
+        int Fmin = 0;
+        int wayCost = 0;
+        std::vector<int> energy;
+
+        State() {
+            energy.reserve(std::max(32,E/4));
+        }
+
+        bool step(State& prev, int index, const std::vector<int>& A)
+        {
+            const auto dEmin = 2;
+            const auto dEmax = 2 + A[index-1]*index;
+
+            //if (prev.Emax<index+2)
+                //return false;
+            
+            //Emin = std::max(prev.Emin-dEmax, 0);
+            //Emax = std::max(prev.Emax-dEmin, Emin);
+            Fmax = prev.Fmax;
+            Fmin = prev.Fmin;
+
+            energy.erase(energy.begin(), energy.end());
+            energy.resize(Emax-Emin+1, -1);
+
+            int assigned = 0;
+            for (int E=prev.Emin,i=0; E<=prev.Emax; ++i, ++E)
+            {
+                if (prev.food[i]!=-1) {
+                    if (E>=dEmax) {
+                        auto e = E-dEmax;
+                        food[e-Emin] = std::max(food[e-Emin], prev.food[i]+A[index-1]);
+                        Fmax = std::max(Fmax, food[e-Emin]);
+                        assigned++;
+                    }
+                    if (E>=dEmin) {
+                        auto e = E-dEmin;
+                        food[e-Emin] = std::max(food[e-Emin], prev.food[i]);
+                        assigned++;
+                    }
+                }
+            }
+
+            return assigned;
+        }
+    };
+
+    State cur{E};
+    State next{E};
+
+    for(int index=1; index<=A.size(); ++index) {
+         if (bool res = next.step(cur, index, A)) 
+            next.swap(cur);
+        else
+            break;
+    }
+
+    return cur.Fmax;
+}
+
 
 void read(int &E, std::vector<int> &A)
 {
